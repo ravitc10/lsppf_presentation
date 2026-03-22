@@ -72,7 +72,7 @@ color_map = {
 
 
 # ----------------------------
-# Build figure (FIXED hover)
+# Build figure
 # ----------------------------
 fig = go.Figure()
 
@@ -84,17 +84,13 @@ for name in unique_names:
             x=subset["x"],
             y=subset["y"],
             mode="markers",
-            marker=dict(
-                size=12,
-                color=color_map[name],
-            ),
+            marker=dict(size=12, color=color_map[name]),
             customdata=subset[["name", "wrapped_comment"]].values,
             hovertemplate="<b>%{customdata[0]}</b><br><br>%{customdata[1]}<extra></extra>",
             showlegend=False,
         )
     )
 
-# Layout (no axes at all)
 fig.update_layout(
     title="Discussion Comments — Interactive t-SNE Map",
     showlegend=False,
@@ -103,14 +99,7 @@ fig.update_layout(
     margin=dict(l=10, r=10, t=50, b=10),
     plot_bgcolor="#f9fafb",
     paper_bgcolor="#f9fafb",
-)
-
-fig.update_layout(
-    hoverlabel=dict(
-        bgcolor="white",
-        font_size=13,
-        align="left"
-    )
+    hoverlabel=dict(bgcolor="white", font_size=13, align="left"),
 )
 
 
@@ -146,7 +135,7 @@ for name in unique_names:
 # Dash app
 # ----------------------------
 app = Dash(__name__)
-server = app.server
+server = app.server  # ✅ REQUIRED for gunicorn
 
 app.layout = html.Div(
     style={
@@ -173,25 +162,19 @@ app.layout = html.Div(
 
         # Main layout
         html.Div(
-            style={
-                "display": "flex",
-                "height": "92vh",
-            },
+            style={"display": "flex", "height": "92vh"},
             children=[
 
                 # LEFT: Key
                 html.Div(
-                    style={
-                        "width": "200px",
-                        "padding": "10px",
-                    },
+                    style={"width": "200px", "padding": "10px"},
                     children=[
                         html.H4("Key"),
                         *legend_items
                     ],
                 ),
 
-                # CENTER: Graph with 3D frame
+                # CENTER: Graph
                 html.Div(
                     style={
                         "flex": "1",
@@ -225,7 +208,11 @@ app.layout = html.Div(
 
 
 # ----------------------------
-# Run
+# Run (local + Render safe)
+# ----------------------------
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))  # ✅ critical fix
+    app.run(host="0.0.0.0", port=port, debug=False)
 # ----------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8050"))
