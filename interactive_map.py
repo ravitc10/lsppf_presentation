@@ -72,7 +72,7 @@ color_map = {
 
 
 # ----------------------------
-# Build base figure
+# Build figure
 # ----------------------------
 def build_figure(annotations=None):
     fig = go.Figure()
@@ -157,7 +157,7 @@ app.layout = html.Div(
             children=[
                 html.H2("Discussion Map"),
                 html.P(
-                    "Click points to pin comments. Hover for preview."
+                    "Click a point to show or hide its comment."
                 ),
             ],
         ),
@@ -214,7 +214,7 @@ app.layout = html.Div(
 
 
 # ----------------------------
-# Callback: Add persistent annotations
+# Callback: Toggle annotations
 # ----------------------------
 @app.callback(
     Output("graph", "figure"),
@@ -223,6 +223,9 @@ app.layout = html.Div(
     State("annotations-store", "data"),
 )
 def update_annotations(clickData, stored_annotations):
+    if stored_annotations is None:
+        stored_annotations = []
+
     if clickData is None:
         return build_figure(stored_annotations), stored_annotations
 
@@ -233,21 +236,31 @@ def update_annotations(clickData, stored_annotations):
     name = point["customdata"][0]
     comment = point["customdata"][1]
 
-    new_annotation = dict(
-        x=x,
-        y=y,
-        text=f"<b>{name}</b><br>{comment}",
-        showarrow=True,
-        arrowhead=2,
-        ax=20,
-        ay=-20,
-        bgcolor="white",
-        bordercolor="black",
-        borderwidth=1,
-        font=dict(size=12),
-    )
+    # Check if annotation already exists
+    existing_index = None
+    for i, ann in enumerate(stored_annotations):
+        if ann["x"] == x and ann["y"] == y and ann["text"].startswith(f"<b>{name}</b>"):
+            existing_index = i
+            break
 
-    stored_annotations.append(new_annotation)
+    # Toggle behavior
+    if existing_index is not None:
+        stored_annotations.pop(existing_index)
+    else:
+        new_annotation = dict(
+            x=x,
+            y=y,
+            text=f"<b>{name}</b><br>{comment}",
+            showarrow=True,
+            arrowhead=2,
+            ax=20,
+            ay=-20,
+            bgcolor="white",
+            bordercolor="black",
+            borderwidth=1,
+            font=dict(size=12),
+        )
+        stored_annotations.append(new_annotation)
 
     return build_figure(stored_annotations), stored_annotations
 
