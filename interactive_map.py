@@ -10,7 +10,7 @@ from dash import Dash, dcc, html
 # ----------------------------
 # Files
 # ----------------------------
-COORDS_FILE = Path("article_1_tsne.json")
+COORDS_FILE = Path("final_1_tsne.json")
 
 if not COORDS_FILE.exists():
     raise FileNotFoundError(f"Missing {COORDS_FILE.resolve()}")
