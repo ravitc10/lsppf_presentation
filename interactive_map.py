@@ -4,7 +4,7 @@ import os
 
 import pandas as pd
 import plotly.graph_objects as go
-from dash import Dash, dcc, html
+from dash import Dash, dcc, html, Input, Output, State
 
 
 # ----------------------------
@@ -72,35 +72,41 @@ color_map = {
 
 
 # ----------------------------
-# Build figure
+# Build base figure
 # ----------------------------
-fig = go.Figure()
+def build_figure(annotations=None):
+    fig = go.Figure()
 
-for name in unique_names:
-    subset = df[df["name"] == name]
+    for name in unique_names:
+        subset = df[df["name"] == name]
 
-    fig.add_trace(
-        go.Scatter(
-            x=subset["x"],
-            y=subset["y"],
-            mode="markers",
-            marker=dict(size=12, color=color_map[name]),
-            customdata=subset[["name", "wrapped_comment"]].values,
-            hovertemplate="<b>%{customdata[0]}</b><br><br>%{customdata[1]}<extra></extra>",
-            showlegend=False,
+        fig.add_trace(
+            go.Scatter(
+                x=subset["x"],
+                y=subset["y"],
+                mode="markers",
+                marker=dict(size=12, color=color_map[name]),
+                customdata=subset[["name", "wrapped_comment"]].values,
+                hovertemplate="<b>%{customdata[0]}</b><br><br>%{customdata[1]}<extra></extra>",
+                showlegend=False,
+            )
         )
+
+    fig.update_layout(
+        title="Discussion Comments — Interactive t-SNE Map",
+        showlegend=False,
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        margin=dict(l=10, r=10, t=50, b=10),
+        plot_bgcolor="#f9fafb",
+        paper_bgcolor="#f9fafb",
+        hoverlabel=dict(bgcolor="white", font_size=13, align="left"),
     )
 
-fig.update_layout(
-    title="Discussion Comments — Interactive t-SNE Map",
-    showlegend=False,
-    xaxis=dict(visible=False),
-    yaxis=dict(visible=False),
-    margin=dict(l=10, r=10, t=50, b=10),
-    plot_bgcolor="#f9fafb",
-    paper_bgcolor="#f9fafb",
-    hoverlabel=dict(bgcolor="white", font_size=13, align="left"),
-)
+    if annotations:
+        fig.update_layout(annotations=annotations)
+
+    return fig
 
 
 # ----------------------------
@@ -110,11 +116,7 @@ legend_items = []
 for name in unique_names:
     legend_items.append(
         html.Div(
-            style={
-                "display": "flex",
-                "alignItems": "center",
-                "marginBottom": "6px",
-            },
+            style={"display": "flex", "alignItems": "center", "marginBottom": "6px"},
             children=[
                 html.Div(
                     style={
@@ -135,7 +137,8 @@ for name in unique_names:
 # Dash app
 # ----------------------------
 app = Dash(__name__)
-server = app.server  # ✅ REQUIRED for gunicorn
+server = app.server  # required for Render
+
 
 app.layout = html.Div(
     style={
@@ -154,11 +157,13 @@ app.layout = html.Div(
             children=[
                 html.H2("Discussion Map"),
                 html.P(
-                    "Each point is a comment. Colors indicate speakers. "
-                    "Hover over a point to read the full comment."
+                    "Click points to pin comments. Hover for preview."
                 ),
             ],
         ),
+
+        # Store annotations
+        dcc.Store(id="annotations-store", data=[]),
 
         # Main layout
         html.Div(
@@ -194,7 +199,8 @@ app.layout = html.Div(
                             },
                             children=[
                                 dcc.Graph(
-                                    figure=fig,
+                                    id="graph",
+                                    figure=build_figure(),
                                     style={"height": "100%", "width": "100%"},
                                 )
                             ],
@@ -208,12 +214,47 @@ app.layout = html.Div(
 
 
 # ----------------------------
-# Run (local + Render safe)
+# Callback: Add persistent annotations
+# ----------------------------
+@app.callback(
+    Output("graph", "figure"),
+    Output("annotations-store", "data"),
+    Input("graph", "clickData"),
+    State("annotations-store", "data"),
+)
+def update_annotations(clickData, stored_annotations):
+    if clickData is None:
+        return build_figure(stored_annotations), stored_annotations
+
+    point = clickData["points"][0]
+
+    x = point["x"]
+    y = point["y"]
+    name = point["customdata"][0]
+    comment = point["customdata"][1]
+
+    new_annotation = dict(
+        x=x,
+        y=y,
+        text=f"<b>{name}</b><br>{comment}",
+        showarrow=True,
+        arrowhead=2,
+        ax=20,
+        ay=-20,
+        bgcolor="white",
+        bordercolor="black",
+        borderwidth=1,
+        font=dict(size=12),
+    )
+
+    stored_annotations.append(new_annotation)
+
+    return build_figure(stored_annotations), stored_annotations
+
+
+# ----------------------------
+# Run
 # ----------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # ✅ critical fix
-    app.run(host="0.0.0.0", port=port, debug=False)
-# ----------------------------
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "8050"))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
