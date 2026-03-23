@@ -9,8 +9,8 @@ from tqdm import tqdm
 # ========================================
 # LOCAL CONFIG
 # ========================================
-INPUT_FILE = Path("article_1.json")
-OUTPUT_FILE = Path("article_1_with_embeddings.json")
+INPUT_FILE = Path("final_1.json")
+OUTPUT_FILE = Path("final_1_with_embeddings.json")
 
 SBERT_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
