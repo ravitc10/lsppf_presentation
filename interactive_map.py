@@ -155,7 +155,7 @@ app.layout = html.Div(
             style={"textAlign": "center", "marginBottom": "10px"},
             children=[
                 html.H2("Discussion Map"),
-                html.P("Click a point to show its comment. Click anywhere to clear."),
+                html.P("Click a point to show its comment"),
             ],
         ),
 
