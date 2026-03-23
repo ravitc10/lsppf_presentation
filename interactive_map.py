@@ -74,7 +74,7 @@ color_map = {
 # ----------------------------
 # Build figure
 # ----------------------------
-def build_figure(annotations=None):
+def build_figure(annotation=None):
     fig = go.Figure()
 
     for name in unique_names:
@@ -103,14 +103,14 @@ def build_figure(annotations=None):
         hoverlabel=dict(bgcolor="white", font_size=13, align="left"),
     )
 
-    if annotations:
-        fig.update_layout(annotations=annotations)
+    if annotation:
+        fig.update_layout(annotations=[annotation])
 
     return fig
 
 
 # ----------------------------
-# Custom key (left side)
+# Custom key
 # ----------------------------
 legend_items = []
 for name in unique_names:
@@ -137,7 +137,7 @@ for name in unique_names:
 # Dash app
 # ----------------------------
 app = Dash(__name__)
-server = app.server  # required for Render
+server = app.server
 
 
 app.layout = html.Div(
@@ -151,26 +151,21 @@ app.layout = html.Div(
     },
     children=[
 
-        # Instructions
         html.Div(
             style={"textAlign": "center", "marginBottom": "10px"},
             children=[
                 html.H2("Discussion Map"),
-                html.P(
-                    "Click a point to show or hide its comment."
-                ),
+                html.P("Click a point to show its comment. Click anywhere to clear."),
             ],
         ),
 
-        # Store annotations
-        dcc.Store(id="annotations-store", data=[]),
+        # store only ONE annotation
+        dcc.Store(id="annotation-store", data=None),
 
-        # Main layout
         html.Div(
             style={"display": "flex", "height": "92vh"},
             children=[
 
-                # LEFT: Key
                 html.Div(
                     style={"width": "200px", "padding": "10px"},
                     children=[
@@ -179,7 +174,6 @@ app.layout = html.Div(
                     ],
                 ),
 
-                # CENTER: Graph
                 html.Div(
                     style={
                         "flex": "1",
@@ -201,6 +195,7 @@ app.layout = html.Div(
                                 dcc.Graph(
                                     id="graph",
                                     figure=build_figure(),
+                                    clear_on_unhover=True,
                                     style={"height": "100%", "width": "100%"},
                                 )
                             ],
@@ -214,55 +209,34 @@ app.layout = html.Div(
 
 
 # ----------------------------
-# Callback: Toggle annotations
+# Callback: single annotation (click anywhere clears)
 # ----------------------------
 @app.callback(
     Output("graph", "figure"),
-    Output("annotations-store", "data"),
+    Output("annotation-store", "data"),
     Input("graph", "clickData"),
-    State("annotations-store", "data"),
 )
-def update_annotations(clickData, stored_annotations):
-    if stored_annotations is None:
-        stored_annotations = []
-
+def update_annotation(clickData):
     if clickData is None:
-        return build_figure(stored_annotations), stored_annotations
+        return build_figure(), None
 
     point = clickData["points"][0]
 
-    x = point["x"]
-    y = point["y"]
-    name = point["customdata"][0]
-    comment = point["customdata"][1]
+    annotation = dict(
+        x=point["x"],
+        y=point["y"],
+        text=f"<b>{point['customdata'][0]}</b><br>{point['customdata'][1]}",
+        showarrow=True,
+        arrowhead=2,
+        ax=20,
+        ay=-20,
+        bgcolor="white",
+        bordercolor="black",
+        borderwidth=1,
+        font=dict(size=12),
+    )
 
-    # Check if annotation already exists
-    existing_index = None
-    for i, ann in enumerate(stored_annotations):
-        if ann["x"] == x and ann["y"] == y and ann["text"].startswith(f"<b>{name}</b>"):
-            existing_index = i
-            break
-
-    # Toggle behavior
-    if existing_index is not None:
-        stored_annotations.pop(existing_index)
-    else:
-        new_annotation = dict(
-            x=x,
-            y=y,
-            text=f"<b>{name}</b><br>{comment}",
-            showarrow=True,
-            arrowhead=2,
-            ax=20,
-            ay=-20,
-            bgcolor="white",
-            bordercolor="black",
-            borderwidth=1,
-            font=dict(size=12),
-        )
-        stored_annotations.append(new_annotation)
-
-    return build_figure(stored_annotations), stored_annotations
+    return build_figure(annotation), annotation
 
 
 # ----------------------------
