@@ -1,8 +1,8 @@
 import csv
 import json
 
-csv_file = "article_1.csv"
-json_file = "article_1.json"
+csv_file = "final_1.csv"
+json_file = "final_1.json"
 
 data = []
 
